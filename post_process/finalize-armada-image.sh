@@ -41,7 +41,7 @@ sudo mkdir -p "${WORK}/mnt/rocknix_abl"
 # vfat has no Unix ownership, so `cp -a` would error on chown under set -e.
 ABL_SRC=$(ls -d "${WORK}/abl-extracted"/rocknix-abl-*)
 sudo cp "${REPO_ROOT}/abl/README" "${WORK}/mnt/rocknix_abl/README"
-for soc in SM8550 SM8650 SM8750; do
+for soc in SM8250 SM8550 SM8650 SM8750; do
     d="${WORK}/mnt/rocknix_abl/${soc}"
     sudo mkdir -p "$d"
     sudo cp "${ABL_SRC}/abl_signed-${soc}.elf" "${ABL_SRC}/abl_signed-${soc}.elf.sha256" "$d/"
