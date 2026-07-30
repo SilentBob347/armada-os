@@ -15,21 +15,10 @@ rm -rf /usr/lib/modules/*
 tar --extract --zstd -f "${TARBALL}" -C /usr/
 depmod -a "${KVER}" -b /
 
-# dracut MODULE_FIRMWARE introspection needs firmware at the build-time path.
+# dracut MODULE_FIRMWARE introspection (55-generate-initramfs) needs firmware
+# at its runtime path.
 mkdir -p /usr/lib/firmware
 cp -a /ctx/system_files/usr/lib/firmware/. /usr/lib/firmware/
-
-# fedora-bootc ships /root -> var/roothome, absent in the build container;
-# dracut-install aborts resolving /root without the target.
-mkdir -p /var/roothome
-
-dracut \
-    --force \
-    --no-hostonly \
-    --reproducible \
-    --kver "${KVER}" \
-    --add ostree \
-    "/usr/lib/modules/${KVER}/initramfs.img" "${KVER}"
 
 echo "armada kernel ${KVER} installed at /usr/lib/modules/${KVER}/"
 ls -la "/usr/lib/modules/${KVER}/" | head -10
