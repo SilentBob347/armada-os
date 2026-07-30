@@ -52,7 +52,6 @@ jobs:
             curl \
             jq \
             pigz \
-            podman \
             python3
 
       - name: Check build recipes
