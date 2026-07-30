@@ -1,7 +1,8 @@
 #!/bin/bash
 # Shared helpers for the armada update hooks (steamos-update, steamos-select-branch).
 
-ARMADA_REGISTRY="ghcr.io/virtudude/armada"
+ARMADA_CANONICAL_REGISTRY="ghcr.io/armada-os/armada"
+ARMADA_LEGACY_REGISTRY="ghcr.io/virtudude/armada"
 ARMADA_CHANNEL_STATE="/var/lib/armada/update-channel"
 ARMADA_CHANNELS="stable beta testing"
 
@@ -28,6 +29,16 @@ armada_tag_from_ref() {
     [[ "$r" == *:* ]] && echo "${r##*:}" || echo ""
 }
 
+# Exact repository matches prevent lookalike names from being trusted.
+armada_registry_from_ref() {
+    local r="${1##*://}"
+    r="${r%%@*}"
+    [[ "${r##*/}" == *:* ]] && r="${r%:*}"
+    case "$r" in
+        "$ARMADA_CANONICAL_REGISTRY"|"$ARMADA_LEGACY_REGISTRY") echo "$r" ;;
+    esac
+}
+
 # Raw container-image-reference of the booted deployment. rpm-ostree works
 # unprivileged (bootc status needs root), so the -c query can call this.
 armada_booted_ref() {
@@ -35,6 +46,7 @@ armada_booted_ref() {
         'import sys,json; d=json.load(sys.stdin).get("deployments") or [{}]; print(d[0].get("container-image-reference",""))' 2>/dev/null || true
 }
 armada_booted_channel() { armada_tag_from_ref "$(armada_booted_ref)"; }
+armada_booted_registry() { armada_registry_from_ref "$(armada_booted_ref)"; }
 
 # Raw image ref of the staged (next-boot) deployment, if any. Needs root.
 armada_staged_ref() {

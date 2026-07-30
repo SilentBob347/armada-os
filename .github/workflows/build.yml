@@ -17,6 +17,8 @@ on:
         default: ""
 
 env:
+  ARMADA_CANONICAL_IMAGE: "ghcr.io/armada-os/armada"
+  ARMADA_LEGACY_IMAGE: "ghcr.io/virtudude/armada"
   IMAGE_DESC: "Armada: a gaming-focused, SteamOS-like Fedora bootc image for ARM64 handhelds"
   IMAGE_NAME: "${{ github.event.repository.name }}"
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
@@ -74,7 +76,7 @@ jobs:
           # ubuntu-24.04 dropped these from the runner image; the build action,
           # rechunk, and push all need them.
           need=""
-          for t in buildah podman skopeo; do
+          for t in buildah jq podman skopeo; do
             command -v "$t" >/dev/null || need="$need $t"
           done
           [ -z "$need" ] || { sudo apt-get update && sudo apt-get install -y $need; }
@@ -163,22 +165,14 @@ jobs:
           set -euxo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | sudo skopeo login ghcr.io -u "${{ github.actor }}" --password-stdin
           IMAGE_FULL="${IMAGE_REGISTRY}/${IMAGE_NAME}"
-          # One image, many tags → one digest, so one signature (below) covers all.
-          # Retry so a transient ghcr 5xx can't leave a tag pushed but unsigned.
-          push_tag() {
-            local n=0
-            until sudo skopeo copy \
-                  containers-storage:localhost/chunked-img "docker://${IMAGE_FULL}:$1"; do
-              n=$((n + 1)); [ "${n}" -ge 3 ] && return 1; sleep 15
-            done
-          }
-          first=""
-          for tag in ${{ steps.metadata.outputs.tags }}; do
-            push_tag "${tag}"
-            [ -n "${first}" ] || first="${tag}"
+          BUILD_TAG="build-${{ steps.version.outputs.version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          n=0
+          until sudo skopeo copy \
+                containers-storage:localhost/chunked-img "docker://${IMAGE_FULL}:${BUILD_TAG}"; do
+            n=$((n + 1)); [ "${n}" -ge 3 ] && exit 1; sleep 15
           done
           # skopeo --digestfile can't write under sudo's userns remap; read it back.
-          digest=$(sudo skopeo inspect --format '{{.Digest}}' "docker://${IMAGE_FULL}:${first}")
+          digest=$(sudo skopeo inspect --format '{{.Digest}}' "docker://${IMAGE_FULL}:${BUILD_TAG}")
           echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
 
       - name: Install Cosign
@@ -192,16 +186,50 @@ jobs:
       - name: Sign container image
         if: github.event_name != 'pull_request' && env.HAVE_SIGNING_SECRET == 'true'
         run: |
+          set -euo pipefail
           IMAGE_FULL="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE_REF="${IMAGE_FULL}@${{ steps.push.outputs.digest }}"
           # cosign runs rootless and has its own auth store — the push step's
           # `sudo skopeo login` only authenticated root, so log cosign in too.
           echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
           # Sign the digest, not a tag (a concurrent run could re-point the tag).
           # --new-bundle-format=false: bootc's verifier expects the legacy .sig; the
           # default flips in cosign v3.
-          cosign sign -y --new-bundle-format=false --key env://COSIGN_PRIVATE_KEY "${IMAGE_FULL}@${{ steps.push.outputs.digest }}"
+          cosign sign -y --new-bundle-format=false --key env://COSIGN_PRIVATE_KEY "${IMAGE_REF}"
+
+          # Legacy-hosted images also need the canonical identity required by bridge policy.
+          if [ "${IMAGE_FULL}" = "${ARMADA_LEGACY_IMAGE}" ]; then
+            cosign sign -y --new-bundle-format=false \
+              --key env://COSIGN_PRIVATE_KEY \
+              --sign-container-identity "${ARMADA_CANONICAL_IMAGE}" \
+              "${IMAGE_REF}"
+          fi
+
+          cosign verify --key system_files/etc/pki/containers/armada.pub "${IMAGE_REF}"
+          if [ "${IMAGE_FULL}" = "${ARMADA_LEGACY_IMAGE}" ]; then
+            cosign verify --check-claims=false \
+              --key system_files/etc/pki/containers/armada.pub \
+              "${IMAGE_REF}" |
+              jq -s -e --arg identity "${ARMADA_CANONICAL_IMAGE}" \
+                'any(.. | objects; .critical?.identity?["docker-reference"]? == $identity)'
+          fi
         env:
           HAVE_SIGNING_SECRET: ${{ secrets.SIGNING_SECRET != '' }}
           TAGS: ${{ steps.push.outputs.digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+
+      - name: Publish channel tags
+        if: github.event_name != 'pull_request' && env.HAVE_SIGNING_SECRET == 'true'
+        run: |
+          set -euo pipefail
+          IMAGE_FULL="${IMAGE_REGISTRY}/${IMAGE_NAME}"
+          SRC="docker://${IMAGE_FULL}@${{ steps.push.outputs.digest }}"
+          for tag in ${{ steps.metadata.outputs.tags }}; do
+            n=0
+            until sudo skopeo copy --all "${SRC}" "docker://${IMAGE_FULL}:${tag}"; do
+              n=$((n + 1)); [ "${n}" -ge 3 ] && exit 1; sleep 15
+            done
+          done
+        env:
+          HAVE_SIGNING_SECRET: ${{ secrets.SIGNING_SECRET != '' }}

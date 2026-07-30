@@ -11,6 +11,16 @@
                     "type": "sigstoreSigned",
                     "keyPaths": ["/etc/pki/containers/armada.pub", "/etc/pki/containers/armada-backup.pub"],
                     "signedIdentity": {
+                        "type": "exactRepository",
+                        "dockerRepository": "ghcr.io/armada-os/armada"
+                    }
+                }
+            ],
+            "ghcr.io/armada-os/armada": [
+                {
+                    "type": "sigstoreSigned",
+                    "keyPaths": ["/etc/pki/containers/armada.pub", "/etc/pki/containers/armada-backup.pub"],
+                    "signedIdentity": {
                         "type": "matchRepository"
                     }
                 }

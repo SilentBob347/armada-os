@@ -2,8 +2,8 @@
 set -euo pipefail
 source /usr/lib/armada/bootimg-args
 source /usr/lib/armada/storage-lib
+source /usr/lib/armada/update-lib
 
-ARMADA_REGISTRY="ghcr.io/virtudude/armada"
 DEVICE="${ARMADA_INTERNAL_DEVICE:-$(armada_internal_device || true)}"
 ESP_GUID="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
 ESP_MIB=512
@@ -399,7 +399,7 @@ base_kargs() {
 set_origin() {
     # A raw `ostree admin deploy` leaves no container origin (bootc upgrade no-ops);
     # copy the booted origin so the internal install tracks the same ghcr ref.
-    local src dst ref
+    local src dst ref registry bare
     # || true: an empty glob makes ls exit nonzero, which set -e would treat as fatal.
     src=$(ls /ostree/deploy/*/deploy/"${commit}".*.origin 2>/dev/null | head -n1) || true
     dst=$(ls "$TARGET"/ostree/deploy/*/deploy/"${commit}".*.origin 2>/dev/null | head -n1) || true
@@ -408,17 +408,15 @@ set_origin() {
         return
     fi
     cp -f "$src" "$dst"
-    local ref bare
     ref=$(sed -n 's/^container-image-reference=//p' "$dst" | head -1)
-    # Only the signed ghcr image can verify + OTA; anything else (a local build) is
-    # left as-is with a warning, not rewritten into a will-reject origin.
-    if [[ $ref != *${ARMADA_REGISTRY}[:@]* ]]; then
-        echo "WARNING: bootc origin is '${ref:-<none>}', not ${ARMADA_REGISTRY}; OTA updates will NOT work on this install (expected for a locally-built image)." >&2
+    # Preserve unknown origins; signed Armada rewrites would make bootc reject them.
+    registry=$(armada_registry_from_ref "$ref")
+    if [[ -z $registry ]]; then
+        echo "WARNING: bootc origin is '${ref:-<none>}', not a signed Armada repository; OTA updates will NOT work on this install (expected for a locally-built image)." >&2
         return
     fi
-    # Anchor to the repo so any transport prefix / @digest form rewrites cleanly to
-    # the signed reference, so the internal install verifies the cosign signature.
-    bare="${ARMADA_REGISTRY}${ref##*${ARMADA_REGISTRY}}"
+    # Anchor at the repository so transport-prefixed and digest refs normalize safely.
+    bare="${registry}${ref##*${registry}}"
     sed -i "s|^container-image-reference=.*|container-image-reference=ostree-image-signed:docker://${bare}|" "$dst"
 }
 
