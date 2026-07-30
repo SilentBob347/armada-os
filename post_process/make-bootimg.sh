@@ -38,7 +38,14 @@ BLS=$(sudo ls "${WORK}/p2"/loader*/entries/*.conf | head -1)
 LINUX_LINE=$(sudo sed -n 's/^linux //p' "${BLS}" | head -1)
 INITRD_LINE=$(sudo sed -n 's/^initrd //p' "${BLS}" | head -1)
 OPTIONS_LINE=$(sudo sed -n 's/^options //p' "${BLS}" | head -1)
-STAMP_ID=$(armada_bootimg_id "${LINUX_LINE}" "${INITRD_LINE}" "${OPTIONS_LINE}" "${DTB_LIST}" "${ARMADA_LIB}/bootimg-args")
+KPATH="${WORK}/p2${LINUX_LINE#/boot}"
+IPATH="${WORK}/p2${INITRD_LINE#/boot}"
+_DTB_ARGS=""
+for _name in ${SUPPORTED_DTBS}; do
+    _DTB_ARGS="${_DTB_ARGS} '${BOOTDIR}/dtb/qcom/${_name}.dtb'"
+done
+CONTENT_ID=$(sudo bash -c "source '${ARMADA_LIB}/bootimg-args'; armada_bootimg_content_id '${KPATH}' '${IPATH}' ${_DTB_ARGS}")
+STAMP_ID=$(armada_bootimg_id "${LINUX_LINE}" "${INITRD_LINE}" "${OPTIONS_LINE}" "${DTB_LIST}" "${ARMADA_LIB}/bootimg-args" "${CONTENT_ID}")
 CMDLINE="${OPTIONS_LINE}"
 
 # Fit the 512-byte cmdline: drop serial console, ostree= first, keep splash kargs.

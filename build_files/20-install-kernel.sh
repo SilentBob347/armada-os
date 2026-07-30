@@ -19,11 +19,9 @@ depmod -a "${KVER}" -b /
 mkdir -p /usr/lib/firmware
 cp -a /ctx/system_files/usr/lib/firmware/. /usr/lib/firmware/
 
-# Plymouth theme must exist before dracut bakes the splash into initramfs.
-mkdir -p /usr/share/plymouth/themes
-cp -a /ctx/system_files/usr/share/plymouth/themes/armada /usr/share/plymouth/themes/
-
-plymouth-set-default-theme armada
+# fedora-bootc ships /root -> var/roothome, absent in the build container;
+# dracut-install aborts resolving /root without the target.
+mkdir -p /var/roothome
 
 dracut \
     --force \
@@ -31,7 +29,6 @@ dracut \
     --reproducible \
     --kver "${KVER}" \
     --add ostree \
-    --add plymouth \
     "/usr/lib/modules/${KVER}/initramfs.img" "${KVER}"
 
 echo "armada kernel ${KVER} installed at /usr/lib/modules/${KVER}/"

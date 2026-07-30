@@ -4,7 +4,6 @@ kargs = [
     "rootwait",
     "rootflags=noatime,compress=zstd:1",
     "console=tty0",
-    "rhgb",
     "quiet",
     "loglevel=3",
 

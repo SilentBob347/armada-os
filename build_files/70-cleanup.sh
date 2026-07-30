@@ -30,6 +30,12 @@ for required in qcom-firmware atheros-firmware bootc podman skopeo gamescope-ses
     rpm -q "$required" >/dev/null || { echo "ERROR: $required got removed"; exit 1; }
 done
 
+# armada-splash owns the console; plymouth would fight it for the VT.
+if rpm -q plymouth >/dev/null 2>&1; then
+    echo "ERROR: plymouth got installed; a dependency dragged it in"
+    exit 1
+fi
+
 for package in \
     armada-jupiter-hw-support \
     fex-emu-utils \

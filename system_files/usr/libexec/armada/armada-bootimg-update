@@ -37,7 +37,13 @@ kpath="${BOOTROOT}${linux#/boot}"
 ipath="${BOOTROOT}${initrd#/boot}"
 dpath="${BOOTROOT}${fdtdir#/boot}"
 
-id=$(armada_bootimg_id "${linux}" "${initrd}" "${options}" "${DTB_LIST}" "${ARGS_FILE}")
+content_files=("${kpath}" "${ipath}")
+while read -r name; do
+    [ -n "${name}" ] || continue
+    content_files+=("${dpath}/qcom/${name}.dtb")
+done < "${DTB_LIST}"
+id=$(armada_bootimg_id "${linux}" "${initrd}" "${options}" "${DTB_LIST}" "${ARGS_FILE}" \
+    "$(armada_bootimg_content_id "${content_files[@]}")")
 if [ -f "${KERNEL_OUT}" ] && [ "$(cat "${STAMP}" 2>/dev/null || true)" = "${id}" ]; then
     echo "armada-bootimg-update: /KERNEL already current (${linux##*/})"
     exit 0

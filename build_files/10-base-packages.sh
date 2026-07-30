@@ -49,9 +49,6 @@ dnf5 -y install --setopt=install_weak_deps=False \
     xz \
     dracut \
     dracut-config-generic \
-    plymouth \
-    plymouth-system-theme \
-    plymouth-theme-spinner \
     qt6-qttools \
     qt6-qtvirtualkeyboard \
     zenity \
@@ -67,6 +64,7 @@ ln -sf libz.so.1 /usr/lib64/libz.so
 dnf5 -y install --setopt=install_weak_deps=False glibc-langpack-en
 
 dnf5 -y install --setopt=install_weak_deps=False \
+    google-noto-sans-vf-fonts \
     google-noto-sans-cjk-vf-fonts \
     google-noto-sans-thai-vf-fonts \
     google-noto-sans-arabic-vf-fonts \

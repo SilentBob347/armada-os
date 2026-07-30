@@ -164,6 +164,8 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
 
     # BIB leaves /var/tmp scratch when overlay umount races --rm.
     sudo rm -rf /var/tmp/podman[0-9]* /var/tmp/buildah-cache-[0-9]* || true
+    # A failed build leaves its ~12G BUILDTMP behind (removed only on success).
+    sudo rm -rf "${PWD}"/_build-bib.* || true
 
     BUILDTMP=$(mktemp -p "${PWD}" -d -t _build-bib.XXXXXXXXXX)
 
@@ -206,7 +208,9 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
     else
         sudo chown -R "$(id -u):$(id -g)" "$BUILDTMP"
     fi
+    # mv cannot overwrite a non-empty dir from the previous build.
     mkdir -p output
+    rm -rf output/image
     mv -f $BUILDTMP/* output/
     rmdir $BUILDTMP
 

@@ -3,7 +3,15 @@ set -euxo pipefail
 
 cp -a /ctx/system_files/. /
 install -Dpm 0755 /packages/extest/libextest.so /usr/lib/extest/libextest.so
+install -Dpm 0755 /packages/armada-splash/armada-splash /usr/libexec/armada/armada-splash
+
 cp -a /packages/mesa-android/waydroid/vendor /usr/share/armada/waydroid/
+
+# Status text font for armada-splash (falls back to its embedded bitmap font
+# if this link dangles).
+splash_font="$(rpm -ql google-noto-sans-vf-fonts | grep -m1 '\.ttf$')"
+[ -n "${splash_font}" ]
+ln -sf "${splash_font}" /usr/share/armada/splash/font.ttf
 
 # mkbootimg must be present for on-device /KERNEL rebuilds after OTA.
 install -Dpm 0755 /ctx/build_files/vendor/mkbootimg/mkbootimg.py /usr/libexec/armada/mkbootimg.py
@@ -40,6 +48,20 @@ systemctl --global enable armada-steamos-manager.service
 systemctl enable armada-bootimg-sync.service
 systemctl enable armada-flatpak-setup.service
 systemctl enable armada-waydroid-input.path
+systemctl enable armada-splash-stall.service
+systemctl enable armada-splash-early.service
+systemctl enable armada-splash-reboot-screen.service
+systemctl enable armada-splash-poweroff-screen.service
+
+# logind's "reboot implies set-wall-message" annotation lets Steam re-enable
+# the reboot wall past the deny rule; the pre-check fails loud on a reformat.
+login1_policy=/usr/share/polkit-1/actions/org.freedesktop.login1.policy
+if ! grep -q 'imply.*set-wall-message' "${login1_policy}"; then
+    echo "ERROR: expected set-wall-message imply annotation not found in ${login1_policy}"
+    exit 1
+fi
+sed -i '/imply.*set-wall-message/d' "${login1_policy}"
+
 systemctl disable waydroid-container.service
 
 # Updates are manual (Steam UI / steamos-update). The base image enables this
@@ -55,3 +77,7 @@ systemctl mask irqbalance.service
 
 # Only plain suspend is supported (via the suspend-dispatch drop-in); mask the rest.
 systemctl mask systemd-hibernate.service systemd-hybrid-sleep.service systemd-suspend-then-hibernate.service
+
+# systemd-backlight restores a stale (often near-dark) level mid-boot, fighting
+# the splash's fixed 50% default; Steam persists the user's brightness itself.
+systemctl mask systemd-backlight@.service
