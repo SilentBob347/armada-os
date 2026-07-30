@@ -57,18 +57,13 @@ steam_pid=$!
 waited=0
 # Forward bootstrapper lines ("[ 45%] Downloading update...") to the splash.
 fwd_last=""
-fwd_age=0
 saw_update=0
 forward_updater() {
     local raw
     raw="$(tail -c 8192 "$steamlog" 2>/dev/null \
         | grep -aE '^(\[[0-9 -]{1,4}%?\]|Installing bootstrap)' | tail -1)"
-    if [[ -z "$raw" || "$raw" == "$fwd_last" ]]; then
-        # An idle updater must not read as a hang; revert to the generic line.
-        if [[ -n "$fwd_last" ]] && (( ++fwd_age == 10 )); then say "Starting Steam..."; fi
-        return
-    fi
-    fwd_last="$raw"; fwd_age=0
+    [[ -z "$raw" || "$raw" == "$fwd_last" ]] && return
+    fwd_last="$raw"
     # The sub-second "Checking..." and every-boot "Verifying..." are noise
     # unless a real update was seen.
     case "$raw" in
