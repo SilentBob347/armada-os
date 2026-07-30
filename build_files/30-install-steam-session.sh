@@ -30,26 +30,12 @@ dnf5 -y install --setopt=install_weak_deps=False /packages/jupiter-hw-support/*.
 
 # Avoid gamescope-session-ogui-steam/-powerstation; Terra's aarch64 deps are broken.
 dnf5 -y install --setopt=install_weak_deps=False --enable-repo=terra \
-    gamescope-session \
     steam-notif-daemon
 
-# ROCKNIX's --use-rotation-shader patch makes this a no-arg flag.
-if ! grep -q 'USE_ROTATION_SHADER_OPTION="--use-rotation-shader $USE_ROTATION_SHADER"' \
-    /usr/share/gamescope-session-plus/gamescope-session-plus; then
-    echo "ERROR: gamescope-session-plus rotation-shader hook changed; inspect before patching" >&2
-    exit 1
-fi
-sed -i \
-    's/USE_ROTATION_SHADER_OPTION="--use-rotation-shader $USE_ROTATION_SHADER"/USE_ROTATION_SHADER_OPTION="--use-rotation-shader"/' \
-    /usr/share/gamescope-session-plus/gamescope-session-plus
-
-# Avoid xtrace spam during every game-mode startup.
-sed -i '/^set -x$/d' /usr/share/gamescope-session-plus/gamescope-session-plus
-
-# First gamescope startup can exceed Terra's 5s socket wait on SD.
-sed -i \
-    's/read -r -t 5 response_x_display response_wl_display/read -r -t 15 response_x_display response_wl_display/' \
-    /usr/share/gamescope-session-plus/gamescope-session-plus
+# Armada's package carries the rotation, startup timeout, and HDR capability
+# integration patches for the common session launcher.
+dnf5 -y install --setopt=install_weak_deps=False \
+    /packages/gamescope-session/gamescope-session-*.rpm
 
 dnf5 -y install --setopt=install_weak_deps=False \
     erofs-fuse \

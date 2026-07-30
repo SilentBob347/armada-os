@@ -1,20 +1,22 @@
-ARG FEX_PKG=ghcr.io/virtudude/armada-packages/fex@sha256:5ac08826823c1228e5d25681c0508b79b01ff301e8c32d2cd5bbe72687615e7a
-ARG MESA_PKG=ghcr.io/virtudude/armada-packages/mesa@sha256:ad9144785f6ae3994cb16fec4bd0facb5c3520606cb3fb637ad11c9d42b17769
-ARG MESA_ANDROID_PKG=ghcr.io/virtudude/armada-packages/mesa-android:latest
-ARG MANGOHUD_PKG=ghcr.io/virtudude/armada-packages/mangohud@sha256:583278eb4f9b55f6ee25bc1040ad8066d897e75b947ec8f2c73e01a360368e0c
-ARG GAMESCOPE_PKG=ghcr.io/virtudude/armada-packages/gamescope@sha256:d5f2b5ab57ef94e86b58dfbbe9b5ed6e92c20db1732d9a79b466f82dd31fde92
-ARG POWERDEVIL_PKG=ghcr.io/virtudude/armada-packages/powerdevil@sha256:996937f85b561eccfd006ac1c5e7dbd0a0a1b21846ca518fdb5938c215878d81
-ARG KERNEL_PKG=ghcr.io/virtudude/armada-packages/kernel@sha256:41b6c06f431c1b6511770e311a3f77999ee91981cea1d2496c0810f99c3b181d
-ARG INPUTPLUMBER_PKG=ghcr.io/virtudude/armada-packages/inputplumber@sha256:a09eb3ec26be622b05b4cbe32c01570478b742e33fcc610790b57d3c4d05bd52
-ARG EXTEST_PKG=ghcr.io/virtudude/armada-packages/extest@sha256:a9396ff10ebf647b1a20782e308a7c05d7e0511c7479b4305969e3bdd03c3dd5
-ARG NETWORKMANAGER_PKG=ghcr.io/virtudude/armada-packages/networkmanager@sha256:14606714f9721e638cebc8dad942bd4792579ad58d310a401675d30553d10ee2
-ARG JUPITER_HW_SUPPORT_PKG=ghcr.io/virtudude/armada-packages/jupiter-hw-support@sha256:ff4e36a762e3488e1510b45aed1b0ba800962f3d4f9a5c143b483a6530fc27f3
-ARG ARMADA_SPLASH_PKG=ghcr.io/virtudude/armada-packages/armada-splash@sha256:5a0b144684aef0eac2cc6c119d47b15189d97cf1fcd8a1e820a9f6de6e2cc4c8
+ARG FEX_PKG=ghcr.io/armada-os/armada-packages/fex@sha256:6301fb21fe1d540237b431e75c3369728d824e30b6cdc138faf44271b015785d
+ARG MESA_PKG=ghcr.io/armada-os/armada-packages/mesa@sha256:d3faf6285a93c45e2edf16df963fb039ba31354a3edc2ff7c2618ba410ffee59
+ARG MESA_ANDROID_PKG=ghcr.io/armada-os/armada-packages/mesa-android@sha256:2ef4f1a325502f9ba695acda0ca995d996ed21bf4eb1e706d15351f73cd2b406
+ARG MANGOHUD_PKG=ghcr.io/armada-os/armada-packages/mangohud@sha256:6ed92b44d267a8d2e1339968b59c2679cfd30e81494d4990dcc2c92e0be4fc10
+ARG GAMESCOPE_PKG=ghcr.io/armada-os/armada-packages/gamescope@sha256:5c8896b2ef14b75e9e887bcea4a3ffd6d046bf9fe6e1a4133812880a76744a1d
+ARG GAMESCOPE_SESSION_PKG=ghcr.io/armada-os/armada-packages/gamescope-session@sha256:d44de289a54eb6d7b2af9b0505fc7580106dbe62318edd4a9a3afd3383351fc8
+ARG POWERDEVIL_PKG=ghcr.io/armada-os/armada-packages/powerdevil@sha256:f6d25143dca84f5f71076a3c992e06de87f7ae25fd046cfeb21999df989c4f8b
+ARG KERNEL_PKG=ghcr.io/armada-os/armada-packages/kernel@sha256:c437bf717449d435df09c0ca0735add1d5a95e10e68821053740a4abf3c8f502
+ARG INPUTPLUMBER_PKG=ghcr.io/armada-os/armada-packages/inputplumber@sha256:1369b521b95af6b34b434ac930889faea6e1d18f0a4922a7e90bcb6837da1ad7
+ARG EXTEST_PKG=ghcr.io/armada-os/armada-packages/extest@sha256:c68bd452dd8f9a20527862e87fd446045b86811dc222a2a1744ede8d8b858dfa
+ARG NETWORKMANAGER_PKG=ghcr.io/armada-os/armada-packages/networkmanager@sha256:043eae7f6f236945bc66466337391384949f56ad19807f21fe2e9b6f5c488b5f
+ARG JUPITER_HW_SUPPORT_PKG=ghcr.io/armada-os/armada-packages/jupiter-hw-support@sha256:9bb3b94ced508eccb11ae4ed98b00657c202bf78ad797bf6ece345d1ec19b552
+ARG ARMADA_SPLASH_PKG=ghcr.io/armada-os/armada-packages/armada-splash@sha256:fc1179815c3623426efc790cc02522e22efda9c99b8fc998df65a3b1fb50a150
 
 FROM ${FEX_PKG} AS fex
 FROM ${MESA_PKG} AS mesa
 FROM ${MANGOHUD_PKG} AS mangohud
 FROM ${GAMESCOPE_PKG} AS gamescope
+FROM ${GAMESCOPE_SESSION_PKG} AS gamescope-session
 FROM ${POWERDEVIL_PKG} AS powerdevil
 FROM ${KERNEL_PKG} AS kernel
 FROM ${INPUTPLUMBER_PKG} AS inputplumber
@@ -45,6 +47,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=mesa,source=/rpms,target=/packages/mesa \
     --mount=type=bind,from=mangohud,source=/rpms,target=/packages/mangohud \
     --mount=type=bind,from=gamescope,source=/rpms,target=/packages/gamescope \
+    --mount=type=bind,from=gamescope-session,source=/rpms,target=/packages/gamescope-session \
     --mount=type=bind,from=powerdevil,source=/rpms,target=/packages/powerdevil \
     --mount=type=bind,from=kernel,source=/kernel,target=/packages/kernel \
     --mount=type=bind,from=inputplumber,source=/rpms,target=/packages/inputplumber \
